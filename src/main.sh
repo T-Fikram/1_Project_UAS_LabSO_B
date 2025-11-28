@@ -117,31 +117,27 @@ diff_days() {
     diff_sec=$((sec2 - sec1))
     diff_days=$((diff_sec / 86400))
 
-    return $diff_days
+    echo $diff_days
 }
 
 rotate_backups() {
-    for file in $dest/*; do
-	local backup_date=$(stat -c %y $file)
-	local date_now=$(date +%s)
-	
-	if [[$(diff_days $date_now $backup_date) gt $retention]]; then
-	    rm $file
-	fi
+    for file in "$dest"/*; do
+        if [[ ! -e "$file" ]]; then continue; fi
+        
+        local backup_date=$(stat -c %y "$file")
+        local date_now=$(date +"%Y-%m-%d %H:%M:%S")
+        
+        local selisih=$(diff_days "$date_now" "$backup_date")
+        
+        if [[ "$selisih" =~ ^[0-9]+$ ]]; then
+            if [[ "$selisih" -gt "$retention" ]]; then
+                echo "Menghapus backup lama: $(basename "$file") ($selisih hari)"
+                rm "$file"
+            fi
+        fi
     done
 }
 
-final_message() {
-    # TODO: Anggota 3 mengerjakan bagian ini
-    # - Tampilkan pesan ke terminal apakah backup sukses
-    # - Informasikan lokasi file backup
-    :
-}
-
-
-########################################
-# === FLOW UTAMA PROGRAM (Gabungan) ===
-########################################
 
 main() {
     get_user_input
@@ -149,10 +145,6 @@ main() {
     perform_backup
     write_log
     rotate_backups
-    final_message
 }
 
 main
-
-
-
