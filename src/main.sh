@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Bagian input dari user
 get_user_input() {
     while true; do
@@ -20,15 +22,9 @@ get_user_input() {
     done
 
     while true; do
-        read -e -p "Simpan backup di mana (folder tujuan): " dest
-        dest="${dest/#~/$HOME}"
+        dest="backup/"
         dest=$(echo "$dest" | sed 's/^ *//;s/ *$//')
-
-        if [[ -z "$dest" ]]; then
-            echo "Ini juga gak boleh kosong."
-            continue
-        fi
-
+	
         if command -v realpath >/dev/null; then
             dest=$(realpath "$dest")
         fi
@@ -42,11 +38,11 @@ get_user_input() {
         if [[ "$retention" =~ ^[0-9]+$ ]]; then
             break
         else
-            echo "Masukkan angka aja ya."
+            echo "Masukkan angka aja ya"
         fi
     done
 
-    logFile="$dest/backup.log"
+    logFile="./backup.log"
 }
 
 # Cek folder sumber dan tujuan
@@ -114,15 +110,33 @@ write_log() {
     fi
 }
 
-########################################
-# === BAGIAN ANGGOTA 3 ===
-# ROTASI BACKUP + OUTPUT + README
-########################################
+diff_days() {
+    local date1="$1"
+    local date2="$2"
+
+    sec1=$(date -d "$date1" +%s 2>/dev/null)
+    sec2=$(date -d "$date2" +%s 2>/dev/null)
+    
+    if [ -z "$sec1" ] || [ -z "$sec2" ]; then
+        echo "Error: Format tanggal tidak valid"
+        return 1
+    fi
+    
+    diff_sec=$((sec2 - sec1))
+    diff_days=$((diff_sec / 86400))
+
+    return $diff_days
+}
 
 rotate_backups() {
-    # TODO: Anggota 3 mengerjakan bagian ini
-    # - Menghapus backup yang lebih tua dari $retention hari
-    :
+    for [[file in $FILE_PATH/*]]; do
+	local backup_date=$(stat -c %y $file)
+	local date_now=$(date + %s)
+	
+	if [[$(diff_days date_now backup_date) gt $retention]]; then
+	    rm $file
+	fi
+    done
 }
 
 final_message() {
