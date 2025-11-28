@@ -73,20 +73,62 @@ validate_folders() {
 ########################################
 
 perform_backup() {
-    # TODO: Anggota 2 mengerjakan bagian ini
-    # - Generate timestamp
-    # - Buat nama file backup-YYYYMMDD-HHMMSS.tar.gz
-    # - Jalankan tar untuk membuat backup
-    # - Simpan path file backup ke variabel global FILE_PATH
-    :
+    # Generate timestamp untuk nama file
+    timestamp=$(date +"%Y%m%d-%H%M%S")
+    filename="backup-$timestamp.tar.gz"
+    FILE_PATH="$dest/$filename"
+
+    # Mulai proses backup
+    echo "Membuat backup..."
+    
+    if [[ -d "$src" ]]; then
+        # Jika sumber adalah folder
+        parent=$(dirname "$src")
+        base=$(basename "$src")
+        tar -czf "$FILE_PATH" -C "$parent" "$base"
+    else
+        # Jika sumber adalah file
+        tar -czf "$FILE_PATH" -C "$(dirname "$src")" "$(basename "$src")"
+    fi
+
+    # Simpan exit code (untuk log)
+    BACKUP_STATUS=$?
 }
 
+
 write_log() {
-    # TODO: Anggota 2 mengerjakan bagian ini
-    # - Mencatat start time, finish time, ukuran file, status SUCCESS/FAILED
-    # - Log disimpan ke "$dest/backup.log"
-    :
+    finish_time=$(date +%s)
+    readable_finish=$(date +"%Y-%m-%d %H:%M:%S")
+
+    if [[ $BACKUP_STATUS -eq 0 ]]; then
+        status="SUCCESS"
+    else
+        status="FAILED"
+    fi
+
+    # Hitung ukuran file (hanya jika sukses)
+    if [[ -f "$FILE_PATH" ]]; then
+        size=$(du -h "$FILE_PATH" | cut -f1)
+    else
+        size="0"
+    fi
+
+    # Tulis ke log file
+    {
+        echo "$(date +"%Y-%m-%d %H:%M:%S") | Backup finished: $(basename "$FILE_PATH")"
+        echo "$(date +"%Y-%m-%d %H:%M:%S") | Size: $size | Status: $status"
+    } >> "$log_file"
+
+    # Pesan ke terminal
+    if [[ $status == "SUCCESS" ]]; then
+        echo "Backup selesai: $(basename "$FILE_PATH")"
+        echo "Ukuran backup: $size"
+        echo "Backup tersimpan di: $dest"
+    else
+        echo "Backup gagal! Cek log di: $log_file"
+    fi
 }
+
 
 
 ########################################
@@ -122,3 +164,5 @@ main() {
 }
 
 main
+
+
