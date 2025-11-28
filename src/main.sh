@@ -68,31 +68,24 @@ validate_folders() {
 }
 
 perform_backup() {
-    # Generate timestamp untuk nama file
     timestamp=$(date +"%Y%m%d-%H%M%S")
     filename="backup-$timestamp.tar.gz"
     FILE_PATH="$dest/$filename"
 
-    # Mulai proses backup
     echo "Membuat backup..."
-    
-    if [[ -d "$src" ]]; then
-        # Jika sumber adalah folder
-        parent=$(dirname "$src")
-        base=$(basename "$src")
+
+    if [[ -d "$source" ]]; then
+        parent=$(dirname "$source")
+        base=$(basename "$source")
         tar -czf "$FILE_PATH" -C "$parent" "$base"
     else
-        # Jika sumber adalah file
-        tar -czf "$FILE_PATH" -C "$(dirname "$src")" "$(basename "$src")"
+        tar -czf "$FILE_PATH" -C "$(dirname "$source")" "$(basename "$source")"
     fi
 
-    # Simpan exit code (untuk log)
     BACKUP_STATUS=$?
 }
 
-
 write_log() {
-    finish_time=$(date +%s)
     readable_finish=$(date +"%Y-%m-%d %H:%M:%S")
 
     if [[ $BACKUP_STATUS -eq 0 ]]; then
@@ -101,26 +94,23 @@ write_log() {
         status="FAILED"
     fi
 
-    # Hitung ukuran file (hanya jika sukses)
     if [[ -f "$FILE_PATH" ]]; then
         size=$(du -h "$FILE_PATH" | cut -f1)
     else
         size="0"
     fi
 
-    # Tulis ke log file
     {
         echo "$(date +"%Y-%m-%d %H:%M:%S") | Backup finished: $(basename "$FILE_PATH")"
         echo "$(date +"%Y-%m-%d %H:%M:%S") | Size: $size | Status: $status"
-    } >> "$log_file"
+    } >> "$logFile"    # pastikan nama variabel ini sama dengan yang di get_user_input
 
-    # Pesan ke terminal
     if [[ $status == "SUCCESS" ]]; then
         echo "Backup selesai: $(basename "$FILE_PATH")"
         echo "Ukuran backup: $size"
         echo "Backup tersimpan di: $dest"
     else
-        echo "Backup gagal! Cek log di: $log_file"
+        echo "Backup gagal! Cek log di: $logFile"
     fi
 }
 
@@ -157,5 +147,6 @@ main() {
 }
 
 main
+
 
 
