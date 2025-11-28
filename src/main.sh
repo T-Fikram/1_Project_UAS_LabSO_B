@@ -67,11 +67,6 @@ validate_folders() {
     fi
 }
 
-########################################
-# === BAGIAN ANGGOTA 2 ===
-# PROSES BACKUP + LOGGING
-########################################
-
 perform_backup() {
     # Generate timestamp untuk nama file
     timestamp=$(date +"%Y%m%d-%H%M%S")
@@ -128,8 +123,6 @@ write_log() {
         echo "Backup gagal! Cek log di: $log_file"
     fi
 }
-
-
 
 ########################################
 # === BAGIAN ANGGOTA 3 ===
