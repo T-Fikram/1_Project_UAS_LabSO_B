@@ -1,150 +1,109 @@
 #!/bin/bash
+# FILE: src/main.sh
+# Fungsi: Main Menu Dashboard
 
-# Bagian input dari user
-get_user_input() {
-    while true; do
-        read -e -p "Folder yang mau dibackup: " source
-        source="${source/#~/$HOME}"
+# Setup Path
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONF_FILE="$SCRIPT_DIR/../project.conf"
 
-        # buang spasi berlebih
-        source=$(echo "$source" | sed 's/^ *//;s/ *$//')
+# Pastikan script lain bisa dieksekusi
+chmod +x "$SCRIPT_DIR/"*.sh 2>/dev/null
 
-        if [[ -z "$source" ]]; then
-            echo "Gak boleh kosong."
-            continue
-        fi
+show_header() {
+    clear
+    echo "=========================================="
+    echo "   SYSTEM BACKUP & ROTASI OTOMATIS (UAS)"
+    echo "=========================================="
+}
 
-        # kalau ada realpath ya bagus, kalau nggak ya gpp
-        if command -v realpath >/dev/null; then
-            source=$(realpath "$source")
-        fi
-        break
+run_manual_backup() {
+    echo -e "\n--- Jalankan Backup Manual ---"
+    # Cek config
+    if [[ ! -s "$CONF_FILE" ]]; then
+        echo "Belum ada konfigurasi. Silakan setup dulu."
+        return
+    fi
+
+    # Baca config ke dalam array untuk dipilih
+    mapfile -t lines < <(grep -v '^#' "$CONF_FILE" | grep -v '^$')
+    
+    if [[ ${#lines[@]} -eq 0 ]]; then
+        echo "Konfigurasi kosong."
+        return
+    fi
+
+    echo "Pilih tugas backup untuk dijalankan:"
+    i=1
+    for line in "${lines[@]}"; do
+        IFS='|' read -r src dest ret int <<< "$line"
+        echo "[$i] $src -> $dest"
+        ((i++))
     done
 
-    dest="backup/"
-    
-    # retention days
-    while true; do
-        read -p "Backup disimpan berapa hari: " retention
+    read -p "Nomor (0 untuk semua): " choice
 
-        if [[ "$retention" =~ ^[0-9]+$ ]]; then
-            break
-        else
-            echo "Masukkan angka aja ya"
-        fi
-    done
-
-    logFile="./backup.log"
-}
-
-# Cek folder sumber dan tujuan
-validate_folders() {
-    if [[ ! -d "$source" ]]; then
-        echo "Folder sumber gak ditemukan: $source"
-        exit 1
-    fi
-
-    if [[ ! -d "$dest" ]]; then
-        echo "Folder tujuan belum ada. Bikin dululah."
-        mkdir -p "$dest" || { echo "Gagal bikin folder."; exit 1; }
-    fi
-
-    if [[ ! -w "$dest" ]]; then
-        echo "Folder tujuan gak bisa ditulis."
-        exit 1
-    fi
-}
-
-perform_backup() {
-    timestamp=$(date +"%Y%m%d-%H%M%S")
-    filename="backup-$timestamp.tar.gz"
-    FILE_PATH="$dest/$filename"
-
-    echo "Membuat backup..."
-
-    if [[ -d "$source" ]]; then
-        parent=$(dirname "$source")
-        base=$(basename "$source")
-        tar -czf "$FILE_PATH" -C "$parent" "$base"
+    if [[ "$choice" == "0" ]]; then
+        # Jalankan Semua dengan autoservice logic (tanpa cek waktu)
+        echo "Menjalankan semua backup..."
+        # Kita panggil backup.sh langsung loop manual agar paksa jalan
+        for line in "${lines[@]}"; do
+            IFS='|' read -r src dest ret int <<< "$line"
+            bash "$SCRIPT_DIR/backup.sh" "$src" "$dest" "$ret"
+            bash "$SCRIPT_DIR/rotation-backup.sh" "$dest" "$ret"
+        done
+    elif [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -le "${#lines[@]}" ]; then
+        # Jalankan Satu
+        idx=$((choice-1))
+        IFS='|' read -r src dest ret int <<< "${lines[$idx]}"
+        bash "$SCRIPT_DIR/backup.sh" "$src" "$dest" "$ret"
+        bash "$SCRIPT_DIR/rotation-backup.sh" "$dest" "$ret"
     else
-        tar -czf "$FILE_PATH" -C "$(dirname "$source")" "$(basename "$source")"
-    fi
-
-    BACKUP_STATUS=$?
-}
-
-write_log() {
-    readable_finish=$(date +"%Y-%m-%d %H:%M:%S")
-
-    if [[ $BACKUP_STATUS -eq 0 ]]; then
-        status="SUCCESS"
-    else
-        status="FAILED"
-    fi
-
-    if [[ -f "$FILE_PATH" ]]; then
-        size=$(du -h "$FILE_PATH" | cut -f1)
-    else
-        size="0"
-    fi
-
-    {
-        echo "$(date +"%Y-%m-%d %H:%M:%S") | Backup finished: $(basename "$FILE_PATH")"
-        echo "$(date +"%Y-%m-%d %H:%M:%S") | Size: $size | Status: $status"
-    } >> "$logFile"    # pastikan nama variabel ini sama dengan yang di get_user_input
-
-    if [[ $status == "SUCCESS" ]]; then
-        echo "Backup selesai: $(basename "$FILE_PATH")"
-        echo "Ukuran backup: $size"
-        echo "Backup tersimpan di: $dest"
-    else
-        echo "Backup gagal! Cek log di: $logFile"
-    fi
-}
-
-diff_days() {
-    local date1="$1"
-    local date2="$2"
-
-    sec1=$(date -d "$date1" +%s 2>/dev/null)
-    sec2=$(date -d "$date2" +%s 2>/dev/null)
-    
-    if [ -z "$sec1" ] || [ -z "$sec2" ]; then
-        echo "Error: Format tanggal tidak valid"
-        return 1
+        echo "Pilihan tidak valid."
     fi
     
-    diff_sec=$((sec2 - sec1))
-    diff_days=$((diff_sec / 86400))
-
-    echo $diff_days
+    read -p "Tekan Enter untuk lanjut..."
 }
 
-rotate_backups() {
-    for file in "$dest"/*; do
-        if [[ ! -e "$file" ]]; then continue; fi
-        
-        local backup_date=$(stat -c %y "$file")
-        local date_now=$(date +"%Y-%m-%d %H:%M:%S")
-        
-        local selisih=$(diff_days "$date_now" "$backup_date")
-        
-        if [[ "$selisih" =~ ^[0-9]+$ ]]; then
-            if [[ "$selisih" -gt "$retention" ]]; then
-                echo "Menghapus backup lama: $(basename "$file") ($selisih hari)"
-                rm "$file"
+while true; do
+    show_header
+    echo "1. Manajemen Konfigurasi (Tambah/Hapus Folder)"
+    echo "2. Jalankan Backup Manual (Sekarang)"
+    echo "3. Recovery / Restore Data"
+    echo "4. Install Otomatisasi (Systemd Service)"
+    echo "5. Keluar"
+    echo "------------------------------------------"
+    read -p "Pilihan Anda: " main_menu
+
+    case $main_menu in
+        1) 
+            bash "$SCRIPT_DIR/edit-conf.sh" 
+            ;;
+        2) 
+            run_manual_backup 
+            ;;
+        3) 
+            if [[ -f "$SCRIPT_DIR/recovery.sh" ]]; then
+                bash "$SCRIPT_DIR/recovery.sh"
+            else
+                echo "Modul recovery belum dibuat."
+                read -p "Enter..."
             fi
-        fi
-    done
-}
-
-
-main() {
-    get_user_input
-    validate_folders
-    perform_backup
-    write_log
-    rotate_backups
-}
-
-main
+            ;;
+        4) 
+            if [[ -f "$SCRIPT_DIR/../install-service.sh" ]]; then
+                bash "$SCRIPT_DIR/../install-service.sh"
+            else
+                echo "Script installer belum ada di root folder."
+                read -p "Enter..."
+            fi
+            ;;
+        5) 
+            echo "Terima kasih."
+            exit 0 
+            ;;
+        *) 
+            echo "Input salah." 
+            sleep 1
+            ;;
+    esac
+done
