@@ -64,11 +64,38 @@ perform_backup() {
 
 
 write_log() {
-    # TODO: Anggota 2 mengerjakan bagian ini
-    # - Mencatat start time, finish time, ukuran file, status SUCCESS/FAILED
-    # - Log disimpan ke "$dest/backup.log"
-    :
+    finish_time=$(date +%s)
+    readable_finish=$(date +"%Y-%m-%d %H:%M:%S")
+
+    if [[ $BACKUP_STATUS -eq 0 ]]; then
+        status="SUCCESS"
+    else
+        status="FAILED"
+    fi
+
+    # Hitung ukuran file (hanya jika sukses)
+    if [[ -f "$FILE_PATH" ]]; then
+        size=$(du -h "$FILE_PATH" | cut -f1)
+    else
+        size="0"
+    fi
+
+    # Tulis ke log file
+    {
+        echo "$(date +"%Y-%m-%d %H:%M:%S") | Backup finished: $(basename "$FILE_PATH")"
+        echo "$(date +"%Y-%m-%d %H:%M:%S") | Size: $size | Status: $status"
+    } >> "$log_file"
+
+    # Pesan ke terminal
+    if [[ $status == "SUCCESS" ]]; then
+        echo "Backup selesai: $(basename "$FILE_PATH")"
+        echo "Ukuran backup: $size"
+        echo "Backup tersimpan di: $dest"
+    else
+        echo "Backup gagal! Cek log di: $log_file"
+    fi
 }
+
 
 
 ########################################
@@ -104,4 +131,5 @@ main() {
 }
 
 main
+
 
