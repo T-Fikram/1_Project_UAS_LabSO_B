@@ -40,13 +40,28 @@ validate_folders() {
 ########################################
 
 perform_backup() {
-    # TODO: Anggota 2 mengerjakan bagian ini
-    # - Generate timestamp
-    # - Buat nama file backup-YYYYMMDD-HHMMSS.tar.gz
-    # - Jalankan tar untuk membuat backup
-    # - Simpan path file backup ke variabel global FILE_PATH
-    :
+    # Generate timestamp untuk nama file
+    timestamp=$(date +"%Y%m%d-%H%M%S")
+    filename="backup-$timestamp.tar.gz"
+    FILE_PATH="$dest/$filename"
+
+    # Mulai proses backup
+    echo "Membuat backup..."
+    
+    if [[ -d "$src" ]]; then
+        # Jika sumber adalah folder
+        parent=$(dirname "$src")
+        base=$(basename "$src")
+        tar -czf "$FILE_PATH" -C "$parent" "$base"
+    else
+        # Jika sumber adalah file
+        tar -czf "$FILE_PATH" -C "$(dirname "$src")" "$(basename "$src")"
+    fi
+
+    # Simpan exit code (untuk log)
+    BACKUP_STATUS=$?
 }
+
 
 write_log() {
     # TODO: Anggota 2 mengerjakan bagian ini
@@ -89,3 +104,4 @@ main() {
 }
 
 main
+
