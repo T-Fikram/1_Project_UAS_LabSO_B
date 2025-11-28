@@ -21,16 +21,8 @@ get_user_input() {
         break
     done
 
-    while true; do
-        dest="backup/"
-        dest=$(echo "$dest" | sed 's/^ *//;s/ *$//')
-	
-        if command -v realpath >/dev/null; then
-            dest=$(realpath "$dest")
-        fi
-        break
-    done
-
+    dest="backup/"
+    
     # retention days
     while true; do
         read -p "Backup disimpan berapa hari: " retention
@@ -129,11 +121,11 @@ diff_days() {
 }
 
 rotate_backups() {
-    for [[file in $FILE_PATH/*]]; do
+    for file in $dest/*; do
 	local backup_date=$(stat -c %y $file)
-	local date_now=$(date + %s)
+	local date_now=$(date +%s)
 	
-	if [[$(diff_days date_now backup_date) gt $retention]]; then
+	if [[$(diff_days $date_now $backup_date) gt $retention]]; then
 	    rm $file
 	fi
     done
