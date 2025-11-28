@@ -1,38 +1,71 @@
-#!/bin/bash
-
-########################################
-# PROJECT UAS SISTEM OPERASI
-# Sistem Backup Otomatis dengan Log & Rotasi
-# Kerangka Script (untuk 3 orang)
-########################################
-
-
-########################################
-# === BAGIAN ANGGOTA 1 ===
-# INPUT USER + VALIDASI FOLDER
-########################################
-
+# Bagian input dari user
 get_user_input() {
-    # TODO: Anggota 1 mengerjakan bagian ini
-    # Minta input:
-    # - source folder
-    # - destination folder
-    # - retention days
+    while true; do
+        read -e -p "Folder yang mau dibackup: " source
+        source="${source/#~/$HOME}"
 
-    # Contoh kerangka:
-    # read -p "Masukkan folder sumber: " source
-    # read -p "Masukkan folder tujuan: " dest
-    # read -p "Masukkan lama penyimpanan backup (hari): " retention
-    :
+        # buang spasi berlebih
+        source=$(echo "$source" | sed 's/^ *//;s/ *$//')
+
+        if [[ -z "$source" ]]; then
+            echo "Gak boleh kosong."
+            continue
+        fi
+
+        # kalau ada realpath ya bagus, kalau nggak ya gpp
+        if command -v realpath >/dev/null; then
+            source=$(realpath "$source")
+        fi
+        break
+    done
+
+    while true; do
+        read -e -p "Simpan backup di mana (folder tujuan): " dest
+        dest="${dest/#~/$HOME}"
+        dest=$(echo "$dest" | sed 's/^ *//;s/ *$//')
+
+        if [[ -z "$dest" ]]; then
+            echo "Ini juga gak boleh kosong."
+            continue
+        fi
+
+        if command -v realpath >/dev/null; then
+            dest=$(realpath "$dest")
+        fi
+        break
+    done
+
+    # retention days
+    while true; do
+        read -p "Backup disimpan berapa hari: " retention
+
+        if [[ "$retention" =~ ^[0-9]+$ ]]; then
+            break
+        else
+            echo "Masukkan angka aja ya."
+        fi
+    done
+
+    logFile="$dest/backup.log"
 }
 
+# Cek folder sumber dan tujuan
 validate_folders() {
-    # TODO: Anggota 1 mengerjakan bagian ini
-    # - Cek folder sumber ada atau tidak
-    # - Cek folder tujuan, kalau tidak ada buat otomatis
-    :
-}
+    if [[ ! -d "$source" ]]; then
+        echo "Folder sumber gak ditemukan: $source"
+        exit 1
+    fi
 
+    if [[ ! -d "$dest" ]]; then
+        echo "Folder tujuan belum ada. Bikin dululah."
+        mkdir -p "$dest" || { echo "Gagal bikin folder."; exit 1; }
+    fi
+
+    if [[ ! -w "$dest" ]]; then
+        echo "Folder tujuan gak bisa ditulis."
+        exit 1
+    fi
+}
 
 ########################################
 # === BAGIAN ANGGOTA 2 ===
