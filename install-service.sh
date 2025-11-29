@@ -5,7 +5,7 @@
 # Setup Path Absolut
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCRIPT_PATH="$ROOT_DIR/src/autoservice.sh"
-SERVICE_NAME="uaspraktikum-backup"
+SERVICE_NAME="autobackup"
 SYSTEMD_DIR="$HOME/.config/systemd/user"
 COMPLETION_FILE="$ROOT_DIR/completion.sh"
 

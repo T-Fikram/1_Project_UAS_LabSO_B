@@ -10,28 +10,41 @@ if [[ ! -f "$CONF_FILE" ]]; then
     echo "# FORMAT: ID|SOURCE|DEST|RETENTION|CRON_SCHEDULE" > "$CONF_FILE"
 fi
 
+# Fungsi Usage (Sekarang menerima argumen exit code)
 usage() {
+    local exit_code=${1:-0} # Default exit 0 (Sukses) jika tidak ada argumen
     echo "Usage: $0 [OPTION] [COMMAND]"
     echo "Commands:"
     echo "  list                  Lihat daftar backup aktif"
     echo "  show <id>             Lihat detail konfigurasi backup"
     echo "  create                Buat konfigurasi backup baru"
     echo "  edit <id>             Edit konfigurasi backup"
-    echo "  delete <id> [--purge] Hapus konfigurasi (opsional: hapus file backup)"
+    echo "  delete <id>           Hapus konfigurasi (opsi: --purge, -y)"
     echo "  backup <id>           Jalankan backup manual sekarang"
     echo "  recovery <id>         Recovery data dari backup"
     echo ""
+    echo "Options:"
+    echo "  -h, --help            Tampilkan pesan bantuan ini"
+    echo ""
     echo "Service Control:"
-    echo "  --install-service     Install systemd service"
+    echo "  --install-service     Install systemd service (WAJIB PERTAMA KALI)"
+    echo "     [--update]         Update konfigurasi jika sudah ada"
     echo "  --uninstall-service   Hapus service dan bersihkan sistem"
-    echo "  --install-completion  Pasang fitur Autocomplete (TAB) ke Terminal"
+    echo "     [-y]               Bypass konfirmasi"
+    echo "  --install-completion  Pasang fitur Autocomplete (TAB)"
     echo "  --start-service       Jalankan service"
     echo "  --stop-service        Hentikan service"
     echo "  --status-service      Cek status service"
-    exit 1
+    exit "$exit_code"
 }
 
-# --- 1. PENGECUALIAN UNTUK INSTALLER ---
+# --- 1. GLOBAL BYPASS (HELP) ---
+# Ditaruh paling atas agar selalu bisa diakses kondisi apapun
+if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+    usage 0
+fi
+
+# --- 2. PENGECUALIAN UNTUK INSTALLER ---
 if [[ "$1" == "--install-service" ]]; then
     shift
     bash "$ROOT_DIR/install-service.sh" "$@"
@@ -53,7 +66,6 @@ if [[ "$1" == "--install-completion" ]]; then
         exit 1
     fi
 
-    # Cek apakah sudah pernah diinstall (Grep path file di .bashrc)
     if grep -qF "source $COMP_FILE" "$BASH_RC"; then
         echo "Autocomplete sudah terinstall sebelumnya."
     else
@@ -67,7 +79,7 @@ if [[ "$1" == "--install-completion" ]]; then
     exit 0
 fi
 
-# --- 2. VALIDASI SERVICE (BLOCKING LOGIC) ---
+# --- 3. VALIDASI SERVICE (BLOCKING LOGIC) ---
 check_service_health
 HEALTH_STATUS=$?
 
@@ -78,31 +90,36 @@ if [[ "$HEALTH_STATUS" -eq 1 ]]; then
     echo "Silakan jalankan perintah berikut:"
     echo -e "\e[1;32m   $0 --install-service\e[0m"
     echo ""
-    exit 1
+    usage 1
+
 elif [[ "$HEALTH_STATUS" -eq 2 ]]; then
-    # KASUS: STOPPED -> WARNING SAJA (TIDAK DIBLOKIR)
-    echo -e "\e[1;33m[PERINGATAN] Service otomatisasi sedang BERHENTI (Stopped).\e[0m"
-    echo "Backup otomatis tidak akan berjalan, namun Anda tetap bisa menggunakan fitur manual."
-    echo "Gunakan '$0 --start-service' untuk mengaktifkan kembali."
-    echo "---------------------------------------------------------------"
+    # KASUS: STOPPED
+    # LOGIKA BARU: Jangan tampilkan peringatan jika user memang berniat mengelola service
+    if [[ "$1" != "--start-service" && "$1" != "--stop-service" && "$1" != "--status-service" ]]; then
+        echo -e "\e[1;33m[PERINGATAN] Service otomatisasi sedang BERHENTI (Stopped).\e[0m"
+        echo "Backup otomatis tidak akan berjalan, namun Anda tetap bisa menggunakan fitur manual."
+        echo "Gunakan '$0 --start-service' untuk mengaktifkan kembali."
+        echo "---------------------------------------------------------------"
+    fi
 fi
 
-# --- 3. SERVICE CONTROLLER LAINNYA ---
-# Perintah ini ditaruh di sini agar ikut terblokir jika belum install
+# --- 4. SERVICE CONTROLLER LAINNYA ---
+# Pastikan nama service di sini sesuai dengan variabel dari utils.sh atau nama baru Anda (autobackup)
+# Disarankan pakai variabel $SERVICE_NAME dari utils.sh agar sinkron
 if [[ "$1" == "--start-service" ]]; then
-    systemctl --user start "uaspraktikum-backup.timer"
+    systemctl --user start "${SERVICE_NAME}.timer"
     echo "Service berhasil dijalankan."
     exit 0
 elif [[ "$1" == "--stop-service" ]]; then
-    systemctl --user stop "uaspraktikum-backup.timer"
+    systemctl --user stop "${SERVICE_NAME}.timer"
     echo "Service berhasil dihentikan."
     exit 0
 elif [[ "$1" == "--status-service" ]]; then
-    systemctl --user status "uaspraktikum-backup.timer"
+    systemctl --user status "${SERVICE_NAME}.timer"
     exit 0
 fi
 
-# --- 4. CORE LOGIC (BACKUP/CREATE/DLL) ---
+# --- 5. CORE LOGIC ---
 COMMAND="$1"
 ID_ARG="$2"
 
@@ -131,7 +148,6 @@ case "$COMMAND" in
         new_id=$(generate_id)
         echo "Membuat konfigurasi baru dengan ID: $new_id"
         read -e -p "Folder Source: " src
-        # Gunakan path absolut
         src=$(realpath "${src/#~/$HOME}")
         
         read -e -p "Folder Destination: " dest
@@ -221,6 +237,7 @@ case "$COMMAND" in
         ;;
 
     *)
-        usage
+        # Jika argumen tidak dikenal, panggil usage sebagai error
+        usage 1
         ;;
 esac

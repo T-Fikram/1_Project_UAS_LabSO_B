@@ -2,7 +2,7 @@
 # FILE: src/utils.sh
 
 CONF_FILE="$(dirname "${BASH_SOURCE[0]}")/../project.conf"
-SERVICE_NAME="uaspraktikum-backup"
+SERVICE_NAME="autobackup"
 
 # Generate ID Acak
 generate_id() {

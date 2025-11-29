@@ -2,7 +2,7 @@
 # FILE: completion.sh
 # Fungsi: Memberikan fitur autocomplete (TAB) untuk main.sh
 
-_uaspraktikum_backup_completion() {
+_autobackup_completion() {
     local cur prev opts commands service_opts
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
@@ -12,7 +12,7 @@ _uaspraktikum_backup_completion() {
     commands="list show create edit delete backup recovery"
     
     # Daftar opsi service (diawali --)
-    service_opts="--install-service --install-completion --start-service --stop-service --status-service --update -y"
+    service_opts="--install-service --install-completion --start-service --stop-service --status-service --uninstall-service --update -y --help -h"
 
     # Lokasi config: Coba cari di folder saat ini atau parent folder
     local conf_file=""
@@ -73,6 +73,6 @@ _uaspraktikum_backup_completion() {
 
 # Daftarkan fungsi completion ini ke script main.sh
 # Kita daftarkan untuk berbagai cara pemanggilan script
-complete -F _uaspraktikum_backup_completion ./main.sh
-complete -F _uaspraktikum_backup_completion ./src/main.sh
-complete -F _uaspraktikum_backup_completion src/main.sh
+complete -F _autobackup_completion ./main.sh
+complete -F _autobackup_completion ./src/main.sh
+complete -F _autobackup_completion src/main.sh
