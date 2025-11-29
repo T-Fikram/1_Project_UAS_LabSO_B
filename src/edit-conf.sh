@@ -8,7 +8,7 @@ CONF_FILE="$SCRIPT_DIR/../project.conf"
 
 # Pastikan file config ada
 if [[ ! -f "$CONF_FILE" ]]; then
-    echo "# FORMAT: SOURCE|DESTINATION|RETENTION_DAYS|INTERVAL_HOURS" > "$CONF_FILE"
+    echo "# FORMAT: ID|SOURCE|DESTINATION|RETENTION_DAYS|INTERVAL_HOURS" > "$CONF_FILE"
 fi
 
 # Fungsi Tampilkan List

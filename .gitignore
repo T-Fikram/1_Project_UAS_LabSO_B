@@ -1,1 +1,4 @@
-backup/*
+backup/
+backup.log
+project.conf
+.fuse*
