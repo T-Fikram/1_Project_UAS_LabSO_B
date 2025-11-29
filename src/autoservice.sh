@@ -1,63 +1,59 @@
 #!/bin/bash
 # FILE: src/autoservice.sh
-# Fungsi: Membaca project.conf dan menjalankan backup.sh serta rotation-backup.sh sesuai jadwal.
 
-# Tentukan lokasi file konfigurasi (Asumsi script ini ada di folder src/, jadi config ada di satu level di atasnya)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(dirname "$SCRIPT_DIR")"
-CONF_FILE="$ROOT_DIR/project.conf"
+CONF_FILE="$SCRIPT_DIR/../project.conf"
 
-# Cek apakah file config ada
-if [[ ! -f "$CONF_FILE" ]]; then
-    echo "Config file not found: $CONF_FILE"
-    exit 1
-fi
-
-# Baca file config baris per baris (Lewati baris yang diawali #)
-grep -v '^#' "$CONF_FILE" | while IFS='|' read -r SOURCE DEST RETENTION INTERVAL; do
-    # Bersihkan spasi jika ada
-    SOURCE=$(echo "$SOURCE" | xargs)
-    DEST=$(echo "$DEST" | xargs)
-    RETENTION=$(echo "$RETENTION" | xargs)
-    INTERVAL=$(echo "$INTERVAL" | xargs)
-
-    # Validasi baris config kosong
-    if [[ -z "$SOURCE" ]]; then continue; fi
-
-    # --- LOGIKA PENGECEKAN JADWAL (Simpel) ---
-    # Karena systemd timer nanti akan menjalankan script ini secara berkala (misal tiap jam),
-    # Kita perlu mengecek kapan terakhir kali folder ini dibackup.
-    # Kita akan cek waktu modifikasi file backup terakhir di folder tujuan.
+# Fungsi cek cron sederhana (Pure Bash)
+# Mengembalikan 0 jika match, 1 jika tidak
+check_cron_match() {
+    local cron_str="$1"
     
-    LAST_BACKUP=$(ls -t "$DEST"/backup-*.tar.gz 2>/dev/null | head -n 1)
-    
-    RUN_BACKUP=false
-    
-    if [[ -z "$LAST_BACKUP" ]]; then
-        # Belum pernah backup sama sekali -> Jalankan!
-        echo "[AUTO] First time backup for $SOURCE"
-        RUN_BACKUP=true
-    else
-        # Hitung selisih waktu
-        NOW_EPOCH=$(date +%s)
-        LAST_EPOCH=$(date -r "$LAST_BACKUP" +%s)
-        DIFF_HOURS=$(( (NOW_EPOCH - LAST_EPOCH) / 3600 ))
+    # Ambil waktu sekarang
+    local min=$(date +%-M)  # 0-59
+    local hour=$(date +%-H) # 0-23
+    local dom=$(date +%-d)  # 1-31
+    local mon=$(date +%-m)  # 1-12
+    local dow=$(date +%-w)  # 0-6 (0=Sunday)
+
+    read -r c_min c_hour c_dom c_mon c_dow <<< "$cron_str"
+
+    # Fungsi pembantu untuk cek satu field (support * dan */n dan angka tepat)
+    match_field() {
+        local current=$1
+        local pattern=$2
         
-        if [[ "$DIFF_HOURS" -ge "$INTERVAL" ]]; then
-            echo "[AUTO] Interval reached ($DIFF_HOURS >= $INTERVAL hours). Backing up $SOURCE"
-            RUN_BACKUP=true
+        if [[ "$pattern" == "*" ]]; then
+            return 0
+        elif [[ "$pattern" =~ ^\*/([0-9]+)$ ]]; then
+            # Step (e.g., */5)
+            local step=${BASH_REMATCH[1]}
+            if (( current % step == 0 )); then return 0; else return 1; fi
+        elif [[ "$pattern" == "$current" ]]; then
+            return 0
         else
-            echo "[SKIP] $SOURCE already backed up $DIFF_HOURS hours ago (Interval: $INTERVAL)"
+            # Komplesitas lain (range 1-5, list 1,2) dilewati untuk simplifikasi UAS
+            return 1
         fi
-    fi
+    }
 
-    # Eksekusi jika waktunya tiba
-    if [[ "$RUN_BACKUP" == "true" ]]; then
-        # 1. Jalankan Backup
-        bash "$SCRIPT_DIR/backup.sh" "$SOURCE" "$DEST" "$RETENTION"
-        
-        # 2. Jalankan Rotasi (Hanya jika backup sukses/selesai)
-        bash "$SCRIPT_DIR/rotation-backup.sh" "$DEST" "$RETENTION"
-    fi
+    match_field "$min" "$c_min" && \
+    match_field "$hour" "$c_hour" && \
+    match_field "$dom" "$c_dom" && \
+    match_field "$mon" "$c_mon" && \
+    match_field "$dow" "$c_dow"
+}
 
+# Loop config
+grep -v '^#' "$CONF_FILE" | grep -v '^$' | while IFS='|' read -r id src dest ret cron; do
+    if pgrep -f "tar.*$src" > /dev/null; then
+        echo "Skip $id: Backup still running."
+        continue
+    fi
+    
+    if check_cron_match "$cron"; then
+        echo "[AUTO] Schedule match for $id ($cron). Running backup..."
+        bash "$SCRIPT_DIR/backup.sh" "$src" "$dest" "$ret"
+        bash "$SCRIPT_DIR/rotation-backup.sh" "$dest" "$ret"
+    fi
 done
