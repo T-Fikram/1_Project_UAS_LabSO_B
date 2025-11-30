@@ -38,7 +38,7 @@ if [[ -z "${lines[$idx]}" ]]; then
     exit 1
 fi
 
-IFS='|' read -r src_dir dest_dir ret int <<< "${lines[$idx]}"
+IFS='|' read -r id src_dir dest_dir ret int <<< "${lines[$idx]}"
 
 # 3. List File Backup Tersedia
 echo -e "\nMencari backup di: $dest_dir"
