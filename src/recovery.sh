@@ -14,8 +14,8 @@ if [[ ! -s "$CONF_FILE" ]]; then
     exit 1
 fi
 
-# 2. Pilih Folder Backup (Project)
-echo "Pilih folder project yang ingin dipulihkan:"
+# 2. Pilih Folder Backup
+echo "Pilih folder yang ingin dipulihkan:"
 i=1
 mapfile -t lines < <(grep -v '^#' "$CONF_FILE" | grep -v '^$')
 
@@ -25,7 +25,7 @@ if [[ ${#lines[@]} -eq 0 ]]; then
 fi
 
 for line in "${lines[@]}"; do
-    IFS='|' read -r src dest ret int <<< "$line"
+    IFS='|' read -r id src dest ret int <<< "$line"
     echo "[$i] $src (Backup di: $dest)"
     ((i++))
 done

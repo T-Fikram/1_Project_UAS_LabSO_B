@@ -232,8 +232,7 @@ case "$COMMAND" in
         ;;
     
     recovery)
-        if [[ -z "$ID_ARG" ]]; then echo "Error: Masukkan ID."; exit 1; fi
-        bash "$SCRIPT_DIR/recovery.sh" "$ID_ARG"
+        bash "$SCRIPT_DIR/recovery.sh"
         ;;
 
     *)
