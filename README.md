@@ -46,8 +46,8 @@ Catatan: Setelah instalasi selesai, jalankan perintah:
 source ~/.bashrc
 ``` 
 atau restart terminal Anda agar fitur autocomplete (TAB) dapat berfungsi.
-
-
+  
+  
 ## Cara Penggunaan  
 Semua interaksi dilakukan melalui script utama src/main.sh.
 
@@ -138,7 +138,8 @@ dest_opt: 1 (Asli), 2 (Custom)
 ```Bash
 ./src/main.sh recovery <backup_id> latest 1 -y
 ```
-
+  
+  
 ## Format Jadwal (Cron)  
 Sistem ini menggunakan format standar Cron 5 kolom: Menit Jam Tanggal Bulan Hari
 
