@@ -74,8 +74,17 @@ if [[ "$1" == "--status-service" ]]; then systemctl --user status "${SERVICE_NAM
 COMMAND="$1"
 ID_ARG="$2"
 
+# Fungsi helper untuk error
+error_arg() {
+    echo "Error: Argumen '$1' tidak dikenal atau jumlah argumen salah untuk perintah '$COMMAND'."
+    usage 1
+}
+
 case "$COMMAND" in
     list)
+        # Validasi: Command list TIDAK BOLEH ada argumen tambahan
+        if [[ -n "$2" ]]; then error_arg "$2"; fi
+
         echo "ID           | SOURCE PATH"
         echo "------------------------------------------------"
         grep -v '^#' "$CONF_FILE" | grep -v '^$' | while IFS='|' read -r id src dest ret cron; do
@@ -83,8 +92,27 @@ case "$COMMAND" in
         done
         ;;
 
+    show)
+        # Validasi: Show HARUS punya ID, dan TIDAK BOLEH ada argumen ke-3
+        if [[ -z "$ID_ARG" ]]; then echo "Error: ID wajib diisi."; usage 1; fi
+        if [[ -n "$3" ]]; then error_arg "$3"; fi
+
+        line=$(grep "^$ID_ARG|" "$CONF_FILE")
+        if [[ -z "$line" ]]; then echo "Error: ID tidak ditemukan."; exit 1; fi
+        IFS='|' read -r id src dest ret cron <<< "$line"
+        echo "ID        : $id"
+        echo "Source    : $src"
+        echo "Dest      : $dest"
+        echo "Retention : $ret hari"
+        echo "Schedule  : $cron"
+        ;;
+
     create)
         # Argumen CLI: create <src> <dest> <ret> <cron> [-y]
+        if [[ -n "$6" && "$6" != "-y" ]]; then error_arg "$6"; fi
+        # Argumen ke-7 tidak boleh ada
+        if [[ -n "$7" ]]; then error_arg "$7"; fi
+        
         SRC_IN="$2"
         DEST_IN="$3"
         RET_IN="$4"
@@ -135,9 +163,11 @@ case "$COMMAND" in
         ;;
 
     edit)
-        if [[ -z "$ID_ARG" ]]; then echo "Error: Masukkan ID."; exit 1; fi
+        if [[ -z "$ID_ARG" ]]; then echo "Error: Masukkan ID."; usage 1; fi
         line=$(grep "^$ID_ARG|" "$CONF_FILE")
         if [[ -z "$line" ]]; then echo "Error: ID tidak ditemukan."; exit 1; fi
+        # Argumen ke-7 tidak boleh ada
+        if [[ -n "$7" ]]; then error_arg "$7"; fi
         
         # Argumen CLI: edit <id> <src> <dest> <ret> <cron>
         # Jika argumen CLI ada, overwrite semua. Jika kosong, interactive.
@@ -171,9 +201,17 @@ case "$COMMAND" in
         ;;
 
     delete)
-        if [[ -z "$ID_ARG" ]]; then echo "Error: Masukkan ID."; exit 1; fi
+        if [[ -z "$ID_ARG" ]]; then echo "Error: Masukkan ID."; usage 1; fi
         line=$(grep "^$ID_ARG|" "$CONF_FILE")
         if [[ -z "$line" ]]; then echo "Error: ID tidak ditemukan."; exit 1; fi
+
+        # Validasi Opsi delete (Hanya boleh --purge atau -y)
+        for arg in "$3" "$4"; do
+            if [[ -n "$arg" && "$arg" != "--purge" && "$arg" != "-y" ]]; then
+                error_arg "$arg"
+            fi
+        done
+        if [[ -n "$5" ]]; then error_arg "$5"; fi
 
         IFS='|' read -r id src dest ret cron <<< "$line"
         IS_PURGE=false
@@ -199,7 +237,8 @@ case "$COMMAND" in
         ;;
 
     backup)
-        if [[ -z "$ID_ARG" ]]; then echo "Error: Masukkan ID."; exit 1; fi
+        if [[ -z "$ID_ARG" ]]; then echo "Error: Masukkan ID."; usage 1; fi
+        if [[ -n "$3" ]]; then error_arg "$3"; fi
         line=$(grep "^$ID_ARG|" "$CONF_FILE")
         IFS='|' read -r id src dest ret cron <<< "$line"
         # Kirim ID ke script backup
@@ -208,11 +247,16 @@ case "$COMMAND" in
         ;;
     
     recovery)
-        # Shift argumen agar main.sh tidak memproses argumen recovery
+        # Recovery ditangani script terpisah, tapi kita bisa validasi argumen awal di sini
+        if [[ -z "$ID_ARG" ]]; then echo "Error: Masukkan ID."; usage 1; fi
+        
+        # Shift dan pass ke script recovery
         shift 
-        # Panggil recovery dengan semua argumen sisa
         bash "$SCRIPT_DIR/recovery.sh" "$@"
         ;;
 
-    *) usage 1 ;;
+    *) # Menangkap command ngawur (misal: ./main.sh makan)
+        echo "Error: Perintah '$COMMAND' tidak dikenali."
+        usage 1 
+        ;;
 esac

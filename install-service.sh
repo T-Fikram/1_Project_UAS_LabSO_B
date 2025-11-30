@@ -128,7 +128,11 @@ systemctl --user enable --now "$SERVICE_NAME.timer"
 
 echo "------------------------------------------------"
 echo "Status Timer:"
-systemctl --user list-timers --no-pager | grep "$SERVICE_NAME"
+
+# MENGGUNAKAN AWK UNTUK FORMATTING RAPI
+# Penjelasan: Mengambil output, membuang header, lalu mencetak kolom tertentu dengan spasi yang diatur
+systemctl --user list-timers --no-pager | grep "$SERVICE_NAME" | \
+awk '{printf "NEXT: %-20s %-5s | LAST: %-20s | UNIT: %s\n", $1" "$2, $3, $6" "$7, $10}'
 
 echo "------------------------------------------------"
 echo "Memasang fitur Autocomplete..."
