@@ -40,88 +40,102 @@ Untuk memasang service ke dalam sistem (level user) dan mengaktifkan fitur autoc
 
 ```Bash
 ./src/main.sh --install-service
-Catatan: Setelah instalasi selesai, jalankan perintah source ~/.bashrc atau restart terminal Anda agar fitur autocomplete (TAB) dapat berfungsi.
 ```
+Catatan: Setelah instalasi selesai, jalankan perintah: 
+```Bash
+source ~/.bashrc
+``` 
+atau restart terminal Anda agar fitur autocomplete (TAB) dapat berfungsi.
 
 ## Cara Penggunaan
 Semua interaksi dilakukan melalui script utama src/main.sh.
 
 **1. Manajemen Service**
-   Mengontrol status background service.
+Mengontrol status background service.
 
 Install/Update Service:
 
-Bash
-
+```Bash
 ./src/main.sh --install-service [--update]
 Uninstall Service:
+```
 
-Bash
-
+```Bash
 ./src/main.sh --uninstall-service [-y]
 Start/Stop/Status:
+```
 
-Bash
-
+```Bash
 ./src/main.sh --start-service
 ./src/main.sh --stop-service
-./src/main.sh --status-service 2. Manajemen Backup
+./src/main.sh --status-service
+```
+
+**2. Manajemen Backup**
 Mengelola tugas-tugas backup Anda.
 
 Lihat Daftar Backup Aktif:
 
-Bash
-
+```Bash
 ./src/main.sh list
+```
+
 Buat Jadwal Baru:
 
 Mode Interaktif (Wizard):
-
-Bash
-
+```Bash
 ./src/main.sh create
-Mode Langsung (CLI Arguments): Format: create <src> <dest> <retensi> <cron> [-y]
+```
 
-Bash
+Mode CLI Arguments (Format: create <src> <dest> <retensi> <cron> [-y])
 
+```Bash
 ./src/main.sh create /home/user/Dokumen /tmp/backup 7 "_/30 _ \* \* \*" -y
+```
+
 Edit Konfigurasi:
 
-Bash
-
+```Bash
 ./src/main.sh edit <backup_id>
+```
+
 Hapus Konfigurasi:
 
 Hapus konfigurasi saja:
 
-Bash
-
+```Bash
 ./src/main.sh delete <backup_id>
+```
+
 Hapus konfigurasi BESERTA file backup fisik:
 
-Bash
-
+```Bash
 ./src/main.sh delete <backup_id> --purge
+```
+
 Jalankan Backup Manual (Sekarang):
 
-Bash
-
+```Bash
 ./src/main.sh backup <backup_id> 3. Pemulihan Data (Recovery)
+```
+
 Mengembalikan data dari file backup yang tersimpan.
 
 Mode Interaktif:
 
-Bash
-
+```Bash
 ./src/main.sh recovery <backup_id>
-Mode Otomatis (Restore file terbaru ke lokasi asli): Format: recovery <id> <file|"latest"> <dest_opt> [path] [-y]
+```
+
+Mode Otomatis (Format: recovery <id> <file|"latest"> <dest_opt> [path] [-y])
 
 dest_opt: 1 (Asli), 2 (Custom)
 
-Bash
-
+```Bash
 ./src/main.sh recovery <backup_id> latest 1 -y
-⚙️ Format Jadwal (Cron)
+```
+
+## Format Jadwal (Cron)
 Sistem ini menggunakan format standar Cron 5 kolom: Menit Jam Tanggal Bulan Hari
 
 Contoh:
