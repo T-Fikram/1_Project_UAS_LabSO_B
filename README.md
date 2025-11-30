@@ -1,61 +1,137 @@
-# 1_Project_UAS_LabSO_B
+# AutoBackup Service (UAS Lab SO B)
 
-## 👥 Anggota Kelompok
+Sistem backup otomatis berbasis Bash Shell Script yang dirancang untuk kebutuhan manajemen data yang efisien. Sistem ini dilengkapi dengan manajemen konfigurasi berbasis CLI (Command Line Interface), penjadwalan otomatis menggunakan Systemd Timer, mekanisme penguncian (file locking) untuk keamanan konkurensi, dan fitur pemulihan data yang cerdas.
 
+## Anggota Kelompok
 
-| Nama | NPM |
-| :--- | :--- |
-| Fadhlurrahman Alaudin | 2408107010053 |
+| Nama                     | NPM           |
+| :----------------------- | :------------ |
+| Fadhlurrahman Alaudin    | 2408107010053 |
 | Teuku Fikram Al-Syahbana | 2408107010044 |
-| Muhammad Anis Fathin | 2408107010045 |
+| Muhammad Anis Fathin     | 2408107010045 |
 
+## Fitur Utama
 
+1.  **Manajemen CLI Penuh**: Membuat, mengedit, dan menghapus konfigurasi backup semudah menggunakan perintah git atau apt.
+2.  **Penjadwalan Otomatis**: Terintegrasi dengan Systemd Timer yang mengecek jadwal setiap menit menggunakan format **Cron** (5 kolom).
+3.  **Keamanan Konkurensi**: Mencegah tumpang tindih proses backup menggunakan mekanisme `.lock` file.
+4.  **Sistem ID Unik**: Setiap konfigurasi memiliki ID unik (`backup@xxxx`) untuk pengelolaan file yang presisi dan aman dari duplikasi nama.
+5.  **Smart Recovery**: Fitur restore yang mendukung mode interaktif maupun otomatis (CLI) dengan proteksi penimpaan data (_overwrite protection_).
+6.  **Log & Rotasi**: Pencatatan aktivitas detail dengan penanda ID dan penghapusan otomatis file backup yang kadaluarsa.
 
-# 💾 Sistem Backup Otomatis dengan Log & Rotasi 
+## Struktur Direktori
 
+```text
+.
+├── install-service.sh   # Installer untuk Systemd Service & Autocomplete
+├── project.conf         # Database konfigurasi (Flat-file DB)
+├── completion.sh        # Script untuk Bash Autocomplete (TAB)
+└── src/
+    ├── main.sh          # Interface Utama (CLI Entry Point)
+    ├── autoservice.sh   # Logic Scheduler (Dijalankan oleh Systemd)
+    ├── backup.sh        # Logic Eksekusi Backup (Tar Gzip)
+    ├── recovery.sh      # Logic Pemulihan Data
+    ├── rotation.sh      # Logic Pembersihan Backup Lama
+    └── utils.sh         # Library Fungsi Umum (Validasi, ID, dll)
+```
 
-[![Shell Script](https://img.shields.io/badge/Language-Bash-red.svg)](https://www.gnu.org/software/bash/)
+## Instalasi
+Untuk memasang service ke dalam sistem (level user) dan mengaktifkan fitur autocomplete, jalankan perintah berikut dari folder root proyek:
 
----
+```Bash
+./src/main.sh --install-service
+Catatan: Setelah instalasi selesai, jalankan perintah source ~/.bashrc atau restart terminal Anda agar fitur autocomplete (TAB) dapat berfungsi.
+```
 
-## 📝 Deskripsi Proyek
+## Cara Penggunaan
+Semua interaksi dilakukan melalui script utama src/main.sh.
 
-Proyek ini adalah implementasi **sistem backup otomatis** berbasis **Bash Shell Script** yang dirancang untuk mengamankan data penting. Skrip ini secara interaktif menerima input dari pengguna (folder sumber dan periode retensi) dan melakukan tugas-tugas inti berikut:
+**1. Manajemen Service**
+   Mengontrol status background service.
 
-1.  **Backup Data:** Mengompresi folder sumber (*source folder*) menjadi file `.tar.gz` dengan *timestamp* unik.
-2.  **Pencatatan Log:** Mencatat status (SUCCESS/FAILED), ukuran file, dan waktu penyelesaian ke dalam file `./backup.log`.
-3.  **Rotasi Backup:** Secara otomatis menghapus file backup di folder tujuan (`backup/`) yang usianya melebihi periode retensi yang ditentukan oleh pengguna.
+Install/Update Service:
 
-Tujuan utama sistem ini adalah menyediakan solusi backup yang sederhana, efisien, dan dilengkapi manajemen ruang disk otomatis.
+Bash
 
----
+./src/main.sh --install-service [--update]
+Uninstall Service:
 
-## 💻 Penjelasan Kode 
+Bash
 
-Skrip `backup.sh` disusun dalam beberapa fungsi terpisah untuk memastikan modularitas dan kemudahan *troubleshooting*.
+./src/main.sh --uninstall-service [-y]
+Start/Stop/Status:
 
-### 1. `get_user_input` 💬
-* Fungsi ini bertanggung jawab untuk mendapatkan **Path Folder Sumber** dan **Jumlah Hari Retensi** (rotasi) dari pengguna secara interaktif.
-* Termasuk validasi dasar untuk memastikan folder tidak kosong dan hari retensi adalah angka.
+Bash
 
-### 2. `validate_folders` ✅
-* Memeriksa apakah folder sumber ada (`-d "$source"`). Jika tidak, skrip akan keluar.
-* Membuat folder tujuan backup (`backup/`) jika belum ada menggunakan `mkdir -p`.
+./src/main.sh --start-service
+./src/main.sh --stop-service
+./src/main.sh --status-service 2. Manajemen Backup
+Mengelola tugas-tugas backup Anda.
 
-### 3. `perform_backup` 📦
-* Membuat *timestamp* dengan format `%Y%m%d-%H%M%S` untuk nama file yang unik.
-* Melakukan kompresi data menggunakan utilitas **`tar -czf`** (Create, Gzip, File) sambil menggunakan opsi `-C` untuk navigasi direktori, memastikan path dalam arsip relatif dan bersih.
-* Menyimpan status keberhasilan/kegagalan (`$BACKUP_STATUS`).
+Lihat Daftar Backup Aktif:
 
-### 4. `write_log` 📜
-* Mencatat status proses (**SUCCESS** atau **FAILED**) dan detail seperti ukuran file (`du -h`) ke dalam file `./backup.log`.
-* Memberikan *feedback* kepada pengguna di terminal mengenai hasil backup.
+Bash
 
-### 5. `diff_days` dan `rotate_backups` 🗑️
-* **`diff_days`**: Fungsi pembantu yang menghitung selisih hari antara dua tanggal, penting untuk menentukan usia file.
-* **`rotate_backups`**: Menerapkan rotasi:
-    * Mengiterasi file di folder `backup/`.
-    * Menggunakan **`stat -c %y`** untuk mengambil waktu modifikasi file.
-    * Jika usia file (dihitung oleh `diff_days`) melebihi `$retention`, file tersebut dihapus menggunakan **`rm`**.
+./src/main.sh list
+Buat Jadwal Baru:
 
----
+Mode Interaktif (Wizard):
+
+Bash
+
+./src/main.sh create
+Mode Langsung (CLI Arguments): Format: create <src> <dest> <retensi> <cron> [-y]
+
+Bash
+
+./src/main.sh create /home/user/Dokumen /tmp/backup 7 "_/30 _ \* \* \*" -y
+Edit Konfigurasi:
+
+Bash
+
+./src/main.sh edit <backup_id>
+Hapus Konfigurasi:
+
+Hapus konfigurasi saja:
+
+Bash
+
+./src/main.sh delete <backup_id>
+Hapus konfigurasi BESERTA file backup fisik:
+
+Bash
+
+./src/main.sh delete <backup_id> --purge
+Jalankan Backup Manual (Sekarang):
+
+Bash
+
+./src/main.sh backup <backup_id> 3. Pemulihan Data (Recovery)
+Mengembalikan data dari file backup yang tersimpan.
+
+Mode Interaktif:
+
+Bash
+
+./src/main.sh recovery <backup_id>
+Mode Otomatis (Restore file terbaru ke lokasi asli): Format: recovery <id> <file|"latest"> <dest_opt> [path] [-y]
+
+dest_opt: 1 (Asli), 2 (Custom)
+
+Bash
+
+./src/main.sh recovery <backup_id> latest 1 -y
+⚙️ Format Jadwal (Cron)
+Sistem ini menggunakan format standar Cron 5 kolom: Menit Jam Tanggal Bulan Hari
+
+Contoh:
+
+_/5 _ \* \* \* : Setiap 5 menit.
+
+0 12 \* \* \* : Setiap hari jam 12:00 siang.
+
+30 17 \* \* 5 : Setiap hari Jumat jam 17:30.
+
+0 0 1 \* \* : Setiap tanggal 1 setiap bulan (tengah malam).
+
+Dibuat untuk memenuhi Tugas Besar Praktikum Sistem Operasi Lab B.
