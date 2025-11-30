@@ -47,23 +47,26 @@ source ~/.bashrc
 ``` 
 atau restart terminal Anda agar fitur autocomplete (TAB) dapat berfungsi.
 
-## Cara Penggunaan
+
+## Cara Penggunaan  
 Semua interaksi dilakukan melalui script utama src/main.sh.
 
-**1. Manajemen Service**
+**1. Manajemen Service**  
 Mengontrol status background service.
 
 Install/Update Service:
 
 ```Bash
 ./src/main.sh --install-service [--update]
-Uninstall Service:
 ```
+
+Uninstall Service:
 
 ```Bash
 ./src/main.sh --uninstall-service [-y]
-Start/Stop/Status:
 ```
+
+Start/Stop/Status:
 
 ```Bash
 ./src/main.sh --start-service
@@ -71,7 +74,7 @@ Start/Stop/Status:
 ./src/main.sh --status-service
 ```
 
-**2. Manajemen Backup**
+**2. Manajemen Backup**  
 Mengelola tugas-tugas backup Anda.
 
 Lihat Daftar Backup Aktif:
@@ -80,14 +83,15 @@ Lihat Daftar Backup Aktif:
 ./src/main.sh list
 ```
 
-Buat Jadwal Baru:
+Buat Jadwal Baru:  
 
-Mode Interaktif (Wizard):
+- Mode Interaktif (Wizard):
+
 ```Bash
 ./src/main.sh create
 ```
 
-Mode CLI Arguments (Format: create <src> <dest> <retensi> <cron> [-y])
+- Mode CLI Arguments (Format: create <src> <dest> <retensi> <cron> [-y])
 
 ```Bash
 ./src/main.sh create /home/user/Dokumen /tmp/backup 7 "_/30 _ \* \* \*" -y
@@ -101,19 +105,19 @@ Edit Konfigurasi:
 
 Hapus Konfigurasi:
 
-Hapus konfigurasi saja:
+- Hapus konfigurasi saja:
 
 ```Bash
 ./src/main.sh delete <backup_id>
 ```
 
-Hapus konfigurasi BESERTA file backup fisik:
+- Hapus konfigurasi beserta file backup fisik:
 
 ```Bash
 ./src/main.sh delete <backup_id> --purge
 ```
 
-Jalankan Backup Manual (Sekarang):
+Jalankan Backup Manual:
 
 ```Bash
 ./src/main.sh backup <backup_id> 3. Pemulihan Data (Recovery)
@@ -121,13 +125,13 @@ Jalankan Backup Manual (Sekarang):
 
 Mengembalikan data dari file backup yang tersimpan.
 
-Mode Interaktif:
+- Mode Interaktif:
 
 ```Bash
 ./src/main.sh recovery <backup_id>
 ```
 
-Mode Otomatis (Format: recovery <id> <file|"latest"> <dest_opt> [path] [-y])
+- Mode CLI Arguments (Format: recovery <id> <file|"latest"> <dest_opt> [path] [-y])
 
 dest_opt: 1 (Asli), 2 (Custom)
 
@@ -135,7 +139,7 @@ dest_opt: 1 (Asli), 2 (Custom)
 ./src/main.sh recovery <backup_id> latest 1 -y
 ```
 
-## Format Jadwal (Cron)
+## Format Jadwal (Cron)  
 Sistem ini menggunakan format standar Cron 5 kolom: Menit Jam Tanggal Bulan Hari
 
 Contoh:
