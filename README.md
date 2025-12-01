@@ -4,11 +4,11 @@ Sistem backup otomatis berbasis Bash Shell Script yang dirancang untuk kebutuhan
 
 ## Anggota Kelompok
 
-| Nama                     | NPM           |
-| :----------------------- | :------------ |
-| Fadhlurrahman Alaudin    | 2408107010053 |
-| Teuku Fikram Al-Syahbana | 2408107010044 |
-| Muhammad Anis Fathin     | 2408107010045 |
+| Nama                      | NPM           |
+| :------------------------ | :------------ |
+| Fadhlurrahman Alaudin     | 2408107010053 |
+| Teuku Fikram Al Syahbanna | 2408107010044 |
+| Muhammad Anis Fathin      | 2408107010045 |
 
 ## Fitur Utama
 
@@ -153,4 +153,4 @@ _/5 _ \* \* \* : Setiap 5 menit.
 
 0 0 1 \* \* : Setiap tanggal 1 setiap bulan (tengah malam).
 
-Dibuat untuk memenuhi Tugas Besar Praktikum Sistem Operasi Lab B.
+Dibuat untuk memenuhi Ujian Akhir Semester pada Praktikum Sistem Operasi Lab B.
